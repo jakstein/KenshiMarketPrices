@@ -2,7 +2,7 @@
 
 ## Overview
 
-This project is a tool for a game Kenshi, to read save files and extract the current market markups for the given save. It also then translates the item IDs into a human readable version using game files. After this it converts the JSON files into CSV for easy viewing.
+This project is a tool for a game Kenshi, to read save files and extract the current market markups for the given save. It also then translates the item IDs into a human readable version using game files. After this it converts the JSON files into CSV for easy viewing. It also supports modded items (if the modded items are present in the game files).
 
 [![image.png](https://i.postimg.cc/zDxqXvKB/image.png)](https://postimg.cc/SjYBgyZF)
 
