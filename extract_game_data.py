@@ -3,17 +3,35 @@ import struct
 import json
 import os 
 import glob
-import matplotlib.pyplot as plt # for debug
-import matplotlib.colors as mcolors # for debug
-import matplotlib.patches as mpatches  # for debug
+
+# attempt to shut Pylance up
+plt = None
+mcolors = None
+mpatches = None
+matplotlibAvailable = False
+
+try:
+    import matplotlib.pyplot as plt # for debug
+    import matplotlib.colors as mcolors # for debug
+    import matplotlib.patches as mpatches  # for debug
+    matplotlibAvailable = True # for debug
+except ImportError:
+    matplotlibAvailable = False
+    print("Matplotlib not available. Skipping visualization.")
 
 def plot_city_segments(city_occurrences, total_file_length, output_filename="city_segments_visualization.png"): # AI generated code for debugging
     """
     Generates and saves a bar chart visualizing city segments in the file.
     """
+    if not matplotlibAvailable:
+        return
     if not city_occurrences:
         print("No city occurrences to plot.")
         return
+    
+    # another attempt to shut Pylance up
+    assert plt is not None, "matplotlib.pyplot would be loaded if matplotlibAvailable is True"
+    assert mpatches is not None, "matplotlib.patches would be loaded if matplotlibAvailable is True"
 
     fig, ax = plt.subplots(figsize=(15, 3.5))  # Increased figure height
 
@@ -122,7 +140,9 @@ def extractMarkupsFromGameFile(filePath, cityNamesList, markupLowerBound, markup
         print("Error: Could not encode city names to UTF-8.")
         return None 
     
-    cityRegexPattern = b"|".join(re.escape(cn) for cn in byteCityNames)
+    # Modified regex to search for "Town state <CityName>" and capture only <CityName>
+    # This new structure ensures group(1) always captures the matched city name.
+    cityRegexPattern = b"Town state (" + b"|".join(re.escape(cn) for cn in byteCityNames) + b")"
     if not cityRegexPattern: 
         print("Warning: City names list resulted in an empty regex pattern. No cities to search for.")
         return {}
@@ -130,13 +150,17 @@ def extractMarkupsFromGameFile(filePath, cityNamesList, markupLowerBound, markup
     cityRegex = re.compile(cityRegexPattern)
     for match in cityRegex.finditer(fileContent):
         try:
-            cityNameFound = match.group(0).decode('utf-8')
+            # Extract the captured group 1, which is the city name itself
+            cityNameFound = match.group(1).decode('utf-8') 
             cityOccurrences.append({
                 'name': cityNameFound,
-                'position': match.start()
+                'position': match.start() # Position of "Town state <CityName>"
             })
         except UnicodeDecodeError:
-            print(f"Warning: Could not decode a potential city name at raw offset {match.start()} using UTF-8.")
+            print(f"Warning: Could not decode a potential city name (captured part) at raw offset {match.start()} using UTF-8.")
+        except IndexError:
+            # This might happen if the regex is somehow malformed and doesn't have group 1
+            print(f"Warning: Regex match for city at offset {match.start()} did not capture a city name. Full match: {match.group(0)}")
 
     if not cityOccurrences:
         print("Warning: No specified city names found in the file.")
@@ -145,7 +169,7 @@ def extractMarkupsFromGameFile(filePath, cityNamesList, markupLowerBound, markup
     cityOccurrences.sort(key=lambda x: x['position'])
     print(f"Found {len(cityOccurrences)} occurrences of specified cities.")
 
-    if cityOccurrences:
+    if cityOccurrences and matplotlibAvailable:
         plot_city_segments(cityOccurrences, len(fileContent))
 
     numCities = len(cityOccurrences)
@@ -295,7 +319,7 @@ if __name__ == "__main__":
     gameFilePath = gameFileToProcess 
 
     cityNames = [
-        "Admag", "Bark", "Black Desert City", "Black Scratch", "Blister Hill",
+        "Admag", "Bad Teeth", "Bark", "Black Desert City", "Black Scratch", "Blister Hill",
         "Brink", "Catun", "Clownsteady", "Crab Town", "Drifter's Last",
         "Eyesocket", "Flats Lagoon", "Floodlands", "Free Settlement",
         "Grayflayer Village", "Heft", "Heng", "Hub",
