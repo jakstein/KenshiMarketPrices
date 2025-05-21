@@ -64,8 +64,14 @@ def convertJsonToCsv(jsonFilePath, csvFilePath, citiesHorizontal=False): # this 
                 for cityName in cityNamesOrdered:
                     rowToWrite = [cityName]
                     for itemName in sortedItemNames:
-                        markup = data.get(cityName, {}).get(itemName, '')
-                        rowToWrite.append(markup)
+                        markup_entry = data.get(cityName, {}).get(itemName)
+                        actual_markup_value = ''
+                        if isinstance(markup_entry, list) and len(markup_entry) > 0:
+                            actual_markup_value = markup_entry[0] # Get the value
+                        elif markup_entry is not None and not isinstance(markup_entry, list):
+                            # Handle case where data might be old format (not a list)
+                            actual_markup_value = markup_entry 
+                        rowToWrite.append(actual_markup_value)
                     csvWriter.writerow(rowToWrite)
             else:
                 # Cities as columns, Items as rows (original logic)
@@ -78,10 +84,14 @@ def convertJsonToCsv(jsonFilePath, csvFilePath, citiesHorizontal=False): # this 
                     rowToWrite = [itemName]
                     for cityName in cityNamesOrdered:
                         # Get the markup for the item in the current city
-                        # data[cityName] gives the dictionary of items for that city
-                        # .get(itemName, '') retrieves the markup, or empty string if item not in city
-                        markup = data.get(cityName, {}).get(itemName, '') # Default to empty if city or item missing
-                        rowToWrite.append(markup)
+                        markup_entry = data.get(cityName, {}).get(itemName)
+                        actual_markup_value = ''
+                        if isinstance(markup_entry, list) and len(markup_entry) > 0:
+                            actual_markup_value = markup_entry[0] # Get the value
+                        elif markup_entry is not None and not isinstance(markup_entry, list):
+                            # Handle case where data might be old format (not a list)
+                            actual_markup_value = markup_entry
+                        rowToWrite.append(actual_markup_value)
                     # print(f"Writing data row for '{itemName}': {rowToWrite[:5]}...") # Log a snippet
                     csvWriter.writerow(rowToWrite)
             

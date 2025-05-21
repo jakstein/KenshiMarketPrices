@@ -95,7 +95,7 @@ def extractMarkupsFromGameFile(filePath, cityNamesList, markupLowerBound, markup
     2. Find all occurrences of specified city names and their positions.
     3. For each city, iterate through all unique item names:
        Search for the first occurrence of the item after the city's position.
-       If this occurrence is before the next city's position, extract its markup.
+       If this occurrence is before the next city's position, extract its markup and offset.
     4. Filter out false positives.
     """
     extractedData = {}
@@ -198,26 +198,28 @@ def extractMarkupsFromGameFile(filePath, cityNamesList, markupLowerBound, markup
 
             if itemMatch:
                 itemFoundStartPos = itemMatch.start()
-                
                 if itemFoundStartPos < nextCityStartPos:
-                    markupStartOffset = itemMatch.end() + 0 
+                    markupStartOffset = itemMatch.end() + 0 # markup 2 bytes after the item name
                     markupEndOffset = markupStartOffset + 2
-
-                    if markupEndOffset <= len(fileContent):
+                    
+                    if markupEndOffset <= len(fileContent): # prevent going past EOF
                         markupBytes = fileContent[markupStartOffset:markupEndOffset]
                         try:
-                            markupRawValue = struct.unpack('<h', markupBytes)[0]
+                            markupRawValue = struct.unpack('<h', markupBytes)[0] # <h means little-endian short
                             markupPercentage = markupRawValue / 100.0
                             if markupLowerBound <= markupPercentage <= markupUpperBound:
-                                extractedData[currentCityName][itemNameStr] = markupPercentage
+                                # store as [value, offset]
+                                extractedData[currentCityName][itemNameStr] = [markupPercentage, markupStartOffset]
+                            else:
+                                print(f"DEBUG: Item '{itemNameStr}' in '{currentCityName}' markup {markupPercentage:.2f}% is outside bounds ({markupLowerBound}-{markupUpperBound}). Skipping.")
                         except struct.error:
-                            pass 
+                            print(f"DEBUG: Could not unpack markup for item '{itemNameStr}' in city '{currentCityName}' at offset {markupStartOffset}. Bytes: {markupBytes.hex()}")
+                        except Exception as e:
+                            print(f"DEBUG: Unexpected error processing item '{itemNameStr}' in city '{currentCityName}': {e}")
                     else:
-                        pass 
-                else:
-                    pass
-            else:
-                pass
+                        print(f"DEBUG: Markup for item '{itemNameStr}' in city '{currentCityName}' would read past EOF. Offset: {markupStartOffset}")
+        if not extractedData[currentCityName]: # if no items were added for this city
+            del extractedData[currentCityName] # remove the city key
                 
     if not any(extractedData.values()):
         print("Extraction complete, but no items were successfully associated with any cities according to the logic.")
@@ -367,3 +369,4 @@ if __name__ == "__main__":
         else: 
             print("\n--- EXTRACTION FAILED ---")
             print("Extraction failed due to a critical error. Please check messages above.")
+        print(f"SAVE_FILE_PATH:{gameFilePath}")

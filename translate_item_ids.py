@@ -252,11 +252,11 @@ def translateAllItemIds(markupsJsonPath, dictionaryFilePaths, outputJsonPath):
 
     print("Constructing final translated markups JSON...")
     translatedMarkups = {}
-    for cityName, itemsData in cityMarkups.items(): # AI written block
+    for cityName, itemsData in cityMarkups.items():
         translatedMarkups[cityName] = {}
-        for itemId, markupValue in itemsData.items(): 
-            displayName = itemIdToNameMap.get(itemId, itemId)
-            translatedMarkups[cityName][displayName] = markupValue
+        for itemId, valueAndOffset in itemsData.items():
+            itemName = itemIdToNameMap.get(itemId, itemId) # use original ID if no translation
+            translatedMarkups[cityName][itemName] = valueAndOffset
     
     untranslatedIds = allItemIds - set(itemIdToNameMap.keys())
     if untranslatedIds:
