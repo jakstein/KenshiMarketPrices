@@ -5,7 +5,8 @@ import struct
 import subprocess
 from PySide6.QtWidgets import (QApplication, QMainWindow, QTableWidget, 
                                QTableWidgetItem, QVBoxLayout, QWidget,
-                               QPushButton, QMenuBar, QMessageBox)
+                               QPushButton, QMenuBar, QMessageBox, QLineEdit, 
+                               QHBoxLayout)
 from PySide6.QtGui import QAction, QActionGroup
 from PySide6.QtCore import Qt
 # few bits AI generated, mostly error handling and subprocess handling
@@ -19,6 +20,19 @@ class MarkupEditor(QMainWindow):
         self.setWindowTitle("Kenshi Save Game Markup Editor")
         self.setGeometry(100, 100, 850, 600) # adjusted width for City column
 
+        # filterin
+        self.cityFilterLineEdit = QLineEdit()
+        self.cityFilterLineEdit.setPlaceholderText("Filter by City")
+        self.cityFilterLineEdit.textChanged.connect(self.filterTable)
+
+        self.itemFilterLineEdit = QLineEdit()
+        self.itemFilterLineEdit.setPlaceholderText("Filter by Item Name")
+        self.itemFilterLineEdit.textChanged.connect(self.filterTable)
+
+        filterLayout = QHBoxLayout()
+        filterLayout.addWidget(self.cityFilterLineEdit)
+        filterLayout.addWidget(self.itemFilterLineEdit)
+
         self.tableWidget = QTableWidget()
         self.tableWidget.setColumnCount(3)
         self.tableWidget.setHorizontalHeaderLabels(["City", "Item Name", "Markup (%)"])
@@ -30,6 +44,7 @@ class MarkupEditor(QMainWindow):
         self.saveButton.clicked.connect(self.applyChanges)
 
         layout = QVBoxLayout()
+        layout.addLayout(filterLayout)
         layout.addWidget(self.tableWidget)
         layout.addWidget(self.saveButton)
 
@@ -79,6 +94,20 @@ class MarkupEditor(QMainWindow):
     def setSaveMode(self, saveMode):
         self.saveMode = saveMode
         QMessageBox.information(self, "Save Mode Changed", f"Save mode set to: {saveMode.replace('_', ' ').title()}")
+
+    def filterTable(self):
+        cityFilterText = self.cityFilterLineEdit.text().lower()
+        itemFilterText = self.itemFilterLineEdit.text().lower()
+
+        for rowIdx in range(self.tableWidget.rowCount()):
+            cityItem = self.tableWidget.item(rowIdx, 0)
+            itemNameItem = self.tableWidget.item(rowIdx, 1)
+
+            if cityItem and itemNameItem:
+                cityMatch = cityFilterText in cityItem.text().lower()
+                itemMatch = itemFilterText in itemNameItem.text().lower()
+                
+                self.tableWidget.setRowHidden(rowIdx, not (cityMatch and itemMatch))
 
     def runInitialScripts(self):
         self.originalSaveFilePath = None 
@@ -154,6 +183,7 @@ class MarkupEditor(QMainWindow):
             return
         
         self.populateTable()
+        self.filterTable() # apply filter after loading data
 
     def populateTable(self):
         self.tableWidget.setRowCount(0)
@@ -179,6 +209,7 @@ class MarkupEditor(QMainWindow):
                 markupItemWidget.setData(Qt.UserRole, {"originalValue": markupValue, "offset": offset, "city": city, "itemName": itemName})
                 self.tableWidget.setItem(rowIdx, 2, markupItemWidget)
                 rowIdx += 1
+        self.filterTable()
 
     def reloadAllData(self):
         self.runInitialScripts()
