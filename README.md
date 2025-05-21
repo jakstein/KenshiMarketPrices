@@ -2,9 +2,11 @@
 
 ## Overview
 
-This project is a tool for a game Kenshi, to read save files and extract the current market markups for the given save. It also then translates the item IDs into a human readable version using game files. After this it converts the JSON files into CSV for easy viewing. It also supports modded items (if the modded items are present in the game files).
+This project is a tool for a game Kenshi, to read save files and extract the current market markups for the given save and to edit them. It also then translates the item IDs into a human readable version using game files. After this it converts the JSON files into CSV for easy viewing. It also supports modded items (if the modded items are present in the game files).
+Additionally, it provides a GUI to edit the extracted markups and apply them back to the save file. The GUI allows for randomizing the markups within specified caps and distribution types, as well as filtering items by city or item name.
 
 [![image.png](https://i.postimg.cc/zDxqXvKB/image.png)](https://postimg.cc/SjYBgyZF)
+[![image.png](https://i.postimg.cc/SRHRqQC6/image.png)](https://postimg.cc/y3XsyHfx)
 
 ## Features
 
@@ -14,6 +16,7 @@ This project is a tool for a game Kenshi, to read save files and extract the cur
 *   Converts the extracted and translated data into a CSV format.
 *   Filters data to remove potential false positives and outliers.
 *   Attempts to automatically locate Kenshi installation and save location for necessary game files.
+*   Allows direct editing of extracted item markups and applies them back to the save file (either a local copy or the original).
 
 ## Workflow
 
@@ -39,11 +42,18 @@ The project follows a three-step process, orchestrated by the `run_all.bat` scri
     *   Converts the JSON data into a CSV file named `game_markups_spreadsheet.csv`.
     *   The CSV can be configured to have cities as columns and items as rows, or vice-versa. (via the `citiesHorizontal` variable, default is `True`).
 
+4.  **`save_editor_gui.py`** (run via `run_edit.bat`), provides a graphical interface to:
+*   Load the extracted and translated markups.
+*   Manually edit markup percentages for each item in each city.
+*   Filter items by city or item name.
+*   Randomize markups within specified caps and distribution types.
+*   Apply these changes back to the Kenshi save file. This can be done either by creating a modified local copy of the save or by directly writing to the original save file (use with caution). You can change the save type in the File menu of the GUI.
+
 ## Prerequisites
 
 *   **Python 3.x**: The scripts are written in Python.
 *   **Kenshi Game Installation**: Required for the `.mod` and `.base` files used by `translate_item_ids.py` to map item IDs to names. The script attempts to find this automatically, but placing these files in the `datafiles/` directory is a more reliable alternative (if you know what files exactly to use).
-*   **Kenshi Save File**: The `extract_game_data.py` script needs a Kenshi game file to process. It defaults to looking for `quicksave.save` in a `save/` subdirectory, then `zone.dat` or `platoon.dat` files. Alternatively it'll scan your APPDATA directories for the latest save file if none is found in the `save/` directory.
+*   **Kenshi Save File**: The `extract_game_data.py` script needs a Kenshi game file to process. It defaults to looking for `quicksave.save` in a `save/` subdirectory, then `zone.dat` or `platoon.dat` files. Alternatively it'll scan your APPDATA directories for the latest save file if none is found in the `save/` directory. The `save_editor_gui.py` also interacts with this save file when applying changes.
 
 ## Setup
 
@@ -74,8 +84,9 @@ The project follows a three-step process, orchestrated by the `run_all.bat` scri
         *   `citiesHorizontal`: Set to `True` for items as columns and cities as rows, `False` for the opposite (default: `True`).
 
 2.  **Execute the Batch File**:
-    *   Simply run `run_all.bat`. This will execute the three Python scripts in the correct order.
+    *   To run the analysis pipeline (extract, translate, convert to CSV): Simply run `run_csv.bat`. This will execute the three Python scripts in the correct order and output the CSV file.
+    *   To edit the save file markups: Run `run_edit.bat`. This will launch the `save_editor_gui.py` script, which provides a graphical interface for editing.
     *   The console will display progress, debug messages, and any errors encountered.
 
 3.  **Check Outputs**:
-    *   After execution, you will find `extracted_game_markups.json`, `translated_game_markups.json`, and `game_markups_spreadsheet.csv` in the project directory.
+    *   After execution, you will find `extracted_game_markups.json`, `translated_game_markups.json`, and `game_markups_spreadsheet.csv` in the project directory. For the editing GUI, you'll find also the save file either in the root directory, or overwritten in the source folder (depending on the option you selected in the GUI).

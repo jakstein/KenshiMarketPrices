@@ -3,10 +3,11 @@ import os
 import json
 import struct
 import subprocess
+import random
 from PySide6.QtWidgets import (QApplication, QMainWindow, QTableWidget, 
                                QTableWidgetItem, QVBoxLayout, QWidget,
                                QPushButton, QMenuBar, QMessageBox, QLineEdit, 
-                               QHBoxLayout)
+                               QHBoxLayout, QComboBox, QLabel)
 from PySide6.QtGui import QAction, QActionGroup
 from PySide6.QtCore import Qt
 # few bits AI generated, mostly error handling and subprocess handling
@@ -18,7 +19,26 @@ class MarkupEditor(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Kenshi Save Game Markup Editor")
-        self.setGeometry(100, 100, 850, 600) # adjusted width for City column
+        self.setGeometry(100, 100, 850, 650)
+
+        # random
+        randomizationLayout = QHBoxLayout()
+        self.lowerCapLineEdit = QLineEdit("70.0")
+        self.lowerCapLineEdit.setPlaceholderText("Lower Cap %")
+        self.upperCapLineEdit = QLineEdit("140.5")
+        self.upperCapLineEdit.setPlaceholderText("Upper Cap %")
+        self.distTypeComboBox = QComboBox()
+        self.distTypeComboBox.addItems(["Uniform", "Normal", "Triangular", "Beta (Two-Peak)"])
+        self.randomizeButton = QPushButton("Randomize Markups")
+        self.randomizeButton.clicked.connect(self.randomizeMarkups)
+
+        randomizationLayout.addWidget(QLabel("Lower Cap:"))
+        randomizationLayout.addWidget(self.lowerCapLineEdit)
+        randomizationLayout.addWidget(QLabel("Upper Cap:"))
+        randomizationLayout.addWidget(self.upperCapLineEdit)
+        randomizationLayout.addWidget(QLabel("Distribution:"))
+        randomizationLayout.addWidget(self.distTypeComboBox)
+        randomizationLayout.addWidget(self.randomizeButton)
 
         # filterin
         self.cityFilterLineEdit = QLineEdit()
@@ -44,6 +64,7 @@ class MarkupEditor(QMainWindow):
         self.saveButton.clicked.connect(self.applyChanges)
 
         layout = QVBoxLayout()
+        layout.addLayout(randomizationLayout) 
         layout.addLayout(filterLayout)
         layout.addWidget(self.tableWidget)
         layout.addWidget(self.saveButton)
@@ -108,6 +129,54 @@ class MarkupEditor(QMainWindow):
                 itemMatch = itemFilterText in itemNameItem.text().lower()
                 
                 self.tableWidget.setRowHidden(rowIdx, not (cityMatch and itemMatch))
+    
+    def randomizeMarkups(self):
+        try:
+            lowerCap = float(self.lowerCapLineEdit.text())
+            upperCap = float(self.upperCapLineEdit.text())
+        except ValueError:
+            QMessageBox.warning(self, "Invalid Input", "Lower and Upper caps must be valid numbers.")
+            return
+
+        if lowerCap >= upperCap:
+            QMessageBox.warning(self, "Invalid Input", "Lower cap must be less than Upper cap.")
+            return
+
+        distributionType = self.distTypeComboBox.currentText()
+        
+        changedCount = 0
+        for rowIdx in range(self.tableWidget.rowCount()):
+            markupItem = self.tableWidget.item(rowIdx, 2)
+            if markupItem:
+                newMarkupValue = 0.0
+                if distributionType == "Uniform":
+                    newMarkupValue = random.uniform(lowerCap, upperCap)
+                elif distributionType == "Normal":
+                    mu = (lowerCap + upperCap) / 2
+                    sigma = (upperCap - lowerCap) / 4 
+                    if sigma <= 0:
+                        newMarkupValue = mu
+                    else:
+                        value = random.normalvariate(mu, sigma)
+                        newMarkupValue = max(lowerCap, min(upperCap, value))
+                elif distributionType == "Triangular":
+                    mode = (lowerCap + upperCap) / 2
+                    newMarkupValue = random.triangular(lowerCap, upperCap, mode)
+                elif distributionType == "Beta (Two-Peak)":
+                    alpha = 0.5
+                    beta = 0.5
+                    x = random.betavariate(alpha, beta)
+                    newMarkupValue = lowerCap + x * (upperCap - lowerCap)
+
+                markupItem.setText(f"{newMarkupValue:.2f}")
+                changedCount +=1
+        
+        if changedCount > 0:
+            QMessageBox.information(self, "Randomization Complete", f"Randomized markups for {changedCount} items.")
+        else:
+            QMessageBox.information(self, "Randomization", "No items found to randomize.")
+        
+        self.filterTable()
 
     def runInitialScripts(self):
         self.originalSaveFilePath = None 
@@ -181,9 +250,8 @@ class MarkupEditor(QMainWindow):
             self.data = {}
             self.tableWidget.setRowCount(0) # again clearin table
             return
-        
+ 
         self.populateTable()
-        self.filterTable() # apply filter after loading data
 
     def populateTable(self):
         self.tableWidget.setRowCount(0)
@@ -216,7 +284,8 @@ class MarkupEditor(QMainWindow):
         if self.saveButton.isEnabled():
             self.loadData()
         else:
-            self.tableWidget.setRowCount(0) # table clear
+            self.tableWidget.setRowCount(0)
+            self.filterTable()
 
     def applyChanges(self):
         if not self.originalSaveFilePath:
