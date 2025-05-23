@@ -63,17 +63,29 @@ class MarkupEditor(QMainWindow):
         self.saveButton = QPushButton("Apply Changes")
         self.saveButton.clicked.connect(self.applyChanges)
 
+        self.reloadButton = QPushButton("Reload Data & Scripts")
+        self.reloadButton.clicked.connect(self.reloadAllData)
+
+        self.saveModeComboBox = QComboBox()
+        self.saveModeComboBox.addItems(["Save to Local Copy (Default)", "Direct Write to Original Save"])
+        self.saveModeComboBox.currentIndexChanged.connect(self.handleSaveModeChange)
+
+        controlsLayout = QHBoxLayout()
+        controlsLayout.addWidget(self.reloadButton)
+        controlsLayout.addWidget(self.saveButton)
+        controlsLayout.addWidget(self.saveModeComboBox)
+
         layout = QVBoxLayout()
         layout.addLayout(randomizationLayout) 
         layout.addLayout(filterLayout)
         layout.addWidget(self.tableWidget)
-        layout.addWidget(self.saveButton)
+        layout.addLayout(controlsLayout)
 
         container = QWidget()
         container.setLayout(layout)
         self.setCentralWidget(container)
 
-        self.createMenuBar()
+        self.menuBar().setVisible(False) # Hide the menu bar
 
         self.data = {}
         self.originalSaveFilePath = None
@@ -83,34 +95,14 @@ class MarkupEditor(QMainWindow):
         if self.saveButton.isEnabled(): # only load data when stuff works
             self.loadData()
 
-    def createMenuBar(self):
-        menuBar = self.menuBar()
-        fileMenu = menuBar.addMenu("&File")
-
-        saveOptionsMenu = fileMenu.addMenu("Save Options")
-
-        self.saveOptionsGroup = QActionGroup(self)
-
-        localCopyAction = QAction("Save to Local Copy (Default)", self, checkable=True)
-        localCopyAction.setChecked(True)
-        localCopyAction.triggered.connect(lambda: self.setSaveMode("local_copy"))
-        self.saveOptionsGroup.addAction(localCopyAction)
-        
-        directWriteAction = QAction("Direct Write to Original Save", self, checkable=True)
-        directWriteAction.triggered.connect(lambda: self.setSaveMode("direct_write"))
-        self.saveOptionsGroup.addAction(directWriteAction)
-        self.saveOptionsGroup.setExclusive(True)
-
-        saveOptionsMenu.addAction(localCopyAction)
-        saveOptionsMenu.addAction(directWriteAction)
-        
-        reloadAction = QAction("Reload Data & Scripts", self)
-        reloadAction.triggered.connect(self.reloadAllData)
-        fileMenu.addAction(reloadAction)
-
-        exitAction = QAction("&Exit", self)
-        exitAction.triggered.connect(self.close)
-        fileMenu.addAction(exitAction)
+    def handleSaveModeChange(self, index):
+        if index == 0:
+            newMode = "local_copy"
+        elif index == 1:
+            newMode = "direct_write"
+        else:
+            return
+        self.setSaveMode(newMode)
 
     def setSaveMode(self, saveMode):
         self.saveMode = saveMode
